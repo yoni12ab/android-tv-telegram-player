@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Telegram TV Player</string>
+    <string name="browse_title">Telegram Videos</string>
+    <string name="search_hint">Search videos…</string>
+    <string name="error_loading_videos">Error loading videos</string>
+    <string name="authentication_required">Authentication Required</string>
+    <string name="enter_phone_number">Enter Phone Number</string>
+    <string name="enter_verification_code">Enter Verification Code</string>
+    <string name="verify">Verify</string>
+    <string name="login">Login</string>
+    <string name="recording">Recording…</string>
+    <string name="stop_recording">Stop Recording</string>
+    <string name="sender_verification_failed">Sender verification failed</string>
+    <string name="telegram_api_error">Telegram API Error</string>
+</resources>

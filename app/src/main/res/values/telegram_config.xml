@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Telegram API Configuration -->
+    <!-- Get your API credentials from https://my.telegram.org -->
+    
+    <!-- Replace with your actual API ID -->
+    <integer name="telegram_api_id">12345</integer>
+    
+    <!-- Replace with your actual API Hash -->
+    <string name="telegram_api_hash">your_api_hash_here</string>
+    
+    <!-- Replace with your authorized Telegram User ID -->
+    <!-- Get your user ID by messaging @userinfobot on Telegram -->
+    <string name="authorized_user_id" translatable="false">123456789</string>
+    
+</resources>
