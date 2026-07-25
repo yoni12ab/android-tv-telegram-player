@@ -1,6 +1,6 @@
 package com.telegram.tvplayer
 
-import android.app.Activity
+import androidx.appcompat.app.AppCompatActivity
 import android.content.pm.ActivityInfo
 import android.media.MediaRecorder
 import android.os.Bundle
@@ -17,7 +17,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import java.io.File
 
-class VideoPlayerActivity : Activity() {
+class VideoPlayerActivity : AppCompatActivity() {
     
     private lateinit var player: ExoPlayer
     private lateinit var playerView: PlayerView
