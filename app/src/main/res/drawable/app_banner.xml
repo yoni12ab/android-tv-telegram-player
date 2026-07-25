@@ -10,12 +10,4 @@
         android:height="180"
         android:fillColor="#FF2196F3" />
         
-    <text
-        android:x="160"
-        android:y="90"
-        android:textSize="24"
-        android:fillColor="#FFFFFFFF"
-        android:textAnchor="middle"
-        android:text="Telegram TV" />
-        
 </vector>
