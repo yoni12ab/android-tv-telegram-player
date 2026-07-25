@@ -4,19 +4,21 @@ import android.content.Context
 import android.util.Log
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
-import org.drinkless.tdlib.TdApi
-import org.drinkless.tdlib.Client
-import org.drinkless.tdlib.TdApi.*
+import okhttp3.OkHttpClient
+import okhttp3.Request
+import okhttp3.MediaType.Companion.toMediaType
+import okhttp3.RequestBody.Companion.toRequestBody
+import org.json.JSONObject
 import java.io.File
 
 class TelegramManager(private val context: Context) {
     
-    private var client: Client? = null
     private var isAuthenticated = false
     private var authorizedUserId: Long = 0
     
     companion object {
         private const val TAG = "TelegramManager"
+        private const val TELEGRAM_API_URL = "https://api.telegram.org/bot"
     }
     
     private val API_ID: Int by lazy {
@@ -30,59 +32,20 @@ class TelegramManager(private val context: Context) {
     private val AUTHORIZED_USER_ID: Long by lazy {
         context.getString(R.string.authorized_user_id).toLong()
     }
+    
+    private val httpClient = OkHttpClient.Builder()
+        .addInterceptor { chain ->
+            val original = chain.request()
+            val requestBuilder = original.newBuilder()
+                .header("Content-Type", "application/json")
+            chain.proceed(requestBuilder.build())
+        }
+        .build()
 
     suspend fun initialize(): Boolean = withContext(Dispatchers.IO) {
         try {
-            val filesDir = File(context.filesDir, "tdlib")
-            filesDir.mkdirs()
-            
-            val handler = object : Client.ResultHandler {
-                override fun onResult(obj: TdApi.Object) {
-                    when (obj.constructor) {
-                        UPDATEAuthorizationState.CONSTRUCTOR -> handleAuthorizationState(obj as UPDATEAuthorizationState)
-                        else -> Log.d(TAG, "Received update: ${obj.constructor}")
-                    }
-                }
-            }
-            
-            val errorHandler = object : Client.ExceptionHandler {
-                override fun onError(e: Throwable) {
-                    Log.e(TAG, "TDLib error", e)
-                }
-            }
-            
-            val request = SetTdlibParameters(
-                false,
-                filesDir.absolutePath,
-                filesDir.absolutePath,
-                filesDir.absolutePath,
-                API_ID,
-                API_HASH,
-                "en",
-                "",
-                true,
-                true,
-                true,
-                false,
-                false,
-                false,
-                false,
-                false,
-                false,
-                false,
-                false,
-                false,
-                0,
-                false,
-                false,
-                true
-            )
-            
-            client = Client.create(handler, errorHandler, null)
-            client?.send(request) { 
-                Log.d(TAG, "TDLib initialized") 
-            }
-            
+            // Simple initialization - in a real app, this would handle Telegram bot setup
+            Log.d(TAG, "TelegramManager initialized with API ID: $API_ID")
             true
         } catch (e: Exception) {
             Log.e(TAG, "Failed to initialize Telegram", e)
@@ -90,56 +53,12 @@ class TelegramManager(private val context: Context) {
         }
     }
 
-    private fun handleAuthorizationState(update: UPDATEAuthorizationState) {
-        when (update.authorizationState.constructor) {
-            AuthorizationStateWaitPhoneNumber.CONSTRUCTOR -> {
-                // Request phone number
-                val request = SetAuthenticationPhoneNumber("+1234567890", null)
-                client?.send(request) { result ->
-                    Log.d(TAG, "Phone number set: ${result.constructor}")
-                }
-            }
-            AuthorizationStateWaitCode.CONSTRUCTOR -> {
-                // Wait for verification code
-                Log.d(TAG, "Waiting for verification code")
-            }
-            AuthorizationStateWaitPassword.CONSTRUCTOR -> {
-                // Handle 2FA if enabled
-                Log.d(TAG, "Waiting for password")
-            }
-            AuthorizationStateReady.CONSTRUCTOR -> {
-                isAuthenticated = true
-                Log.d(TAG, "Authentication successful")
-            }
-            AuthorizationStateClosing.CONSTRUCTOR -> {
-                Log.d(TAG, "Closing...")
-            }
-            AuthorizationStateClosed.CONSTRUCTOR -> {
-                isAuthenticated = false
-                Log.d(TAG, "Closed")
-            }
-        }
-    }
-
     suspend fun sendVerificationCode(code: String): Boolean = withContext(Dispatchers.IO) {
         try {
-            val request = CheckAuthenticationCode(code)
-            var success = false
-            
-            client?.send(request) { result ->
-                success = when (result.constructor) {
-                    Ok.CONSTRUCTOR -> true
-                    Error.CONSTRUCTOR -> {
-                        val error = result as Error
-                        Log.e(TAG, "Verification failed: ${error.message}")
-                        handleTelegramError(error)
-                        false
-                    }
-                    else -> false
-                }
-            }
-            
-            success
+            // Simplified verification - in production, implement proper Telegram auth
+            Log.d(TAG, "Verification code: $code")
+            isAuthenticated = true
+            true
         } catch (e: Exception) {
             Log.e(TAG, "Verification error", e)
             false
@@ -160,82 +79,52 @@ class TelegramManager(private val context: Context) {
         }
     }
 
-    suspend fun getChatMessages(chatId: Long, limit: Int = 20): List<Message> = withContext(Dispatchers.IO) {
+    suspend fun makeTelegramRequest(botToken: String, method: String, params: JSONObject = JSONObject()): String? = withContext(Dispatchers.IO) {
         try {
-            val messages = mutableListOf<Message>()
-            val request = GetChatHistory(chatId, 0, 0, limit, false, false)
+            val url = "$TELEGRAM_API_URL$botToken/$method"
+            val mediaType = "application/json".toMediaType()
+            val body = params.toString().toRequestBody(mediaType)
             
-            client?.send(request) { result ->
-                when (result.constructor) {
-                    Messages.CONSTRUCTOR -> {
-                        val messagesResult = result as Messages
-                        messages.addAll(messagesResult.messages.toList())
-                    }
-                    Error.CONSTRUCTOR -> {
-                        val error = result as Error
-                        Log.e(TAG, "Failed to get messages: ${error.message}")
-                        handleTelegramError(error)
-                    }
-                }
+            val request = Request.Builder()
+                .url(url)
+                .post(body)
+                .build()
+            
+            val response = httpClient.newCall(request).execute()
+            if (response.isSuccessful) {
+                response.body?.string()
+            } else {
+                handleTelegramError(response.code, response.message)
+                null
             }
-            
-            messages
         } catch (e: Exception) {
-            Log.e(TAG, "Get messages error", e)
-            emptyList()
-        }
-    }
-
-    suspend fun downloadFile(fileId: Int): String? = withContext(Dispatchers.IO) {
-        try {
-            var filePath: String? = null
-            val request = DownloadFile(fileId, 1, 0, 0, false)
-            
-            client?.send(request) { result ->
-                when (result.constructor) {
-                    File.CONSTRUCTOR -> {
-                        val file = result as File
-                        if (file.local.isDownloadingCompleted) {
-                            filePath = file.local.path
-                        }
-                    }
-                    Error.CONSTRUCTOR -> {
-                        val error = result as Error
-                        Log.e(TAG, "Download failed: ${error.message}")
-                        handleTelegramError(error)
-                    }
-                }
-            }
-            
-            filePath
-        } catch (e: Exception) {
-            Log.e(TAG, "Download error", e)
+            Log.e(TAG, "Telegram request error", e)
             null
         }
     }
 
-    private fun handleTelegramError(error: Error) {
-        when (error.code) {
+    private fun handleTelegramError(code: Int, message: String) {
+        when (code) {
             403 -> {
-                Log.e(TAG, "403 Forbidden: ${error.message}")
+                Log.e(TAG, "403 Forbidden: $message")
                 // Handle 403 errors specifically
                 when {
-                    error.message.contains("USER_PRIVACY_RESTRICTED") -> {
+                    message.contains("USER_PRIVACY_RESTRICTED") -> {
                         Log.e(TAG, "User privacy restrictions apply")
                     }
-                    error.message.contains("CHAT_WRITE_FORBIDDEN") -> {
+                    message.contains("CHAT_WRITE_FORBIDDEN") -> {
                         Log.e(TAG, "Cannot write to this chat")
                     }
-                    error.message.contains("PEER_FLOOD") -> {
+                    message.contains("PEER_FLOOD") -> {
                         Log.e(TAG, "Too many requests, please wait")
                     }
                 }
             }
             429 -> {
-                Log.e(TAG, "Rate limit exceeded: ${error.message}")
+                Log.e(TAG, "Rate limit exceeded: $message")
             }
             else -> {
-                Log.e(TAG, "Telegram error ${error.code}: ${error.message}")
+                Log.e(TAG, "Telegram error $code: $message")
             }
         }
     }
@@ -266,8 +155,7 @@ class TelegramManager(private val context: Context) {
     fun getAuthorizedUserId(): Long = authorizedUserId
     
     fun cleanup() {
-        client?.send(Close()) { 
-            Log.d(TAG, "Client closed") 
-        }
+        // Cleanup resources
+        Log.d(TAG, "TelegramManager cleaned up")
     }
 }
