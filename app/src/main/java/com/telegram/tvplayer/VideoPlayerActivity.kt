@@ -13,6 +13,7 @@ import androidx.lifecycle.lifecycleScope
 import androidx.media3.common.MediaItem
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.ui.PlayerView
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import java.io.File
 
@@ -41,18 +42,6 @@ class VideoPlayerActivity : Activity() {
         
         // Verify sender ID
         telegramManager = TelegramManager(this)
-        lifecycleScope.launch {
-            val isAuthorized = telegramManager.verifySender(senderId)
-            if (!isAuthorized) {
-                Toast.makeText(
-                    this@VideoPlayerActivity,
-                    "Unauthorized sender",
-                    Toast.LENGTH_LONG
-                ).show()
-                finish()
-                return@launch
-            }
-        }
         
         // Setup UI
         playerView = findViewById(R.id.player_view)
@@ -81,6 +70,21 @@ class VideoPlayerActivity : Activity() {
         
         // Lock orientation to landscape
         requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE
+        
+        // Verify sender in background
+        lifecycleScope.launch(Dispatchers.IO) {
+            val isAuthorized = telegramManager.verifySender(senderId)
+            if (!isAuthorized) {
+                runOnUiThread {
+                    Toast.makeText(
+                        this@VideoPlayerActivity,
+                        "Unauthorized sender",
+                        Toast.LENGTH_LONG
+                    ).show()
+                    finish()
+                }
+            }
+        }
     }
     
     private fun startRecording() {
