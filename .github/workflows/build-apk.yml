@@ -24,6 +24,10 @@ jobs:
     - name: Setup Android SDK
       uses: android-actions/setup-android@v3
       
+    - name: Generate keystore
+      run: |
+        keytool -genkey -v -keystore app/telegram-player.keystore -alias telegram-player -keyalg RSA -keysize 2048 -validity 10000 -storepass telegram123 -keypass telegram123 -dname "CN=Telegram Player, OU=Development, O=Telegram TV, L=City, ST=State, C=US"
+        
     - name: Grant execute permission for gradlew
       run: chmod +x gradlew
       
@@ -44,5 +48,5 @@ jobs:
       uses: actions/upload-artifact@v4
       with:
         name: app-release
-        path: app/build/outputs/apk/release/app-release-unsigned.apk
+        path: app/build/outputs/apk/release/app-release.apk
         retention-days: 30
