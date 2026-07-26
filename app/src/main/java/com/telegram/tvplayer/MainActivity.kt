@@ -21,19 +21,27 @@ class MainActivity : FragmentActivity() {
     
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        setContentView(R.layout.activity_main)
         
-        telegramManager = TelegramManager(this)
-        setupUI()
-        
-        // Check authentication
-        if (!telegramManager.isAuthenticated()) {
+        try {
+            setContentView(R.layout.activity_main)
+            
+            telegramManager = TelegramManager(this)
+            setupUI()
+            
+            // Check authentication
+            if (!telegramManager.isAuthenticated()) {
+                startActivity(Intent(this, AuthActivity::class.java))
+                finish()
+                return
+            }
+            
+            loadVideos()
+        } catch (e: Exception) {
+            Log.e(TAG, "Error in MainActivity onCreate", e)
+            // Navigate to auth activity on error
             startActivity(Intent(this, AuthActivity::class.java))
             finish()
-            return
         }
-        
-        loadVideos()
     }
     
     private fun setupUI() {

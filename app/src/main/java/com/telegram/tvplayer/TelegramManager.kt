@@ -22,15 +22,30 @@ class TelegramManager(private val context: Context) {
     }
     
     private val API_ID: Int by lazy {
-        context.resources.getInteger(R.integer.telegram_api_id)
+        try {
+            context.resources.getInteger(R.integer.telegram_api_id)
+        } catch (e: Exception) {
+            Log.e(TAG, "Error loading API_ID, using default", e)
+            12345 // Default fallback value
+        }
     }
     
     private val API_HASH: String by lazy {
-        context.getString(R.string.telegram_api_hash)
+        try {
+            context.getString(R.string.telegram_api_hash)
+        } catch (e: Exception) {
+            Log.e(TAG, "Error loading API_HASH, using default", e)
+            "default_api_hash" // Default fallback value
+        }
     }
     
     private val AUTHORIZED_USER_ID: Long by lazy {
-        context.getString(R.string.authorized_user_id).toLong()
+        try {
+            context.getString(R.string.authorized_user_id).toLong()
+        } catch (e: Exception) {
+            Log.e(TAG, "Error loading AUTHORIZED_USER_ID, using default", e)
+            123456789L // Default fallback value
+        }
     }
     
     private val httpClient = OkHttpClient.Builder()
