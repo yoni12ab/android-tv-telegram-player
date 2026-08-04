@@ -112,6 +112,8 @@ class AuthActivity : AppCompatActivity() {
     
     override fun onDestroy() {
         super.onDestroy()
-        telegramManager.cleanup()
+        if (::telegramManager.isInitialized) {
+            telegramManager.cleanup()
+        }
     }
 }

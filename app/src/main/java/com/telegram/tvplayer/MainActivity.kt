@@ -98,7 +98,9 @@ class MainActivity : FragmentActivity() {
     
     override fun onDestroy() {
         super.onDestroy()
-        telegramManager.cleanup()
+        if (::telegramManager.isInitialized) {
+            telegramManager.cleanup()
+        }
     }
 }
 
